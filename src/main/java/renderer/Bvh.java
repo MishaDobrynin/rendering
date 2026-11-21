@@ -1,6 +1,9 @@
 package renderer;
 
 import java.util.List;
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
+import java.util.Map;
 
 /** In-place median BVH. It avoids recursively copying large triangle sub-lists. */
 final class Bvh {
@@ -14,6 +17,44 @@ final class Bvh {
     }
 
     boolean intersect(Ray ray, Hit hit) { return root.intersect(ray, hit, ordered); }
+
+    /** A stable, flat representation of this BVH for GPU traversal. */
+    GpuData gpuData() {
+        List<Node> flat = new ArrayList<>();
+        flatten(root, flat);
+        Map<Node, Integer> indices = new IdentityHashMap<>();
+        for (int i = 0; i < flat.size(); i++) indices.put(flat.get(i), i);
+        float[] bounds = new float[flat.size() * 8];
+        int[] metadata = new int[flat.size() * 4];
+        for (int i = 0; i < flat.size(); i++) {
+            Node n = flat.get(i);
+            int b = i * 8;
+            bounds[b] = (float) n.bounds.min.x;
+            bounds[b + 1] = (float) n.bounds.min.y;
+            bounds[b + 2] = (float) n.bounds.min.z;
+            bounds[b + 3] = 0;
+            bounds[b + 4] = (float) n.bounds.max.x;
+            bounds[b + 5] = (float) n.bounds.max.y;
+            bounds[b + 6] = (float) n.bounds.max.z;
+            bounds[b + 7] = 0;
+            int m = i * 4;
+            metadata[m] = n.left == null ? -1 : indices.get(n.left);
+            metadata[m + 1] = n.right == null ? -1 : indices.get(n.right);
+            metadata[m + 2] = n.start;
+            metadata[m + 3] = n.count;
+        }
+        return new GpuData(ordered, bounds, metadata);
+    }
+
+    private static void flatten(Node node, List<Node> flat) {
+        flat.add(node);
+        if (node.left != null) {
+            flatten(node.left, flat);
+            flatten(node.right, flat);
+        }
+    }
+
+    record GpuData(Triangle[] orderedTriangles, float[] nodeBounds, int[] nodeMetadata) { }
 
     private Node build(int start, int end, int depth) {
         Aabb box = ordered[start].bounds;

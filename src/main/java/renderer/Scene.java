@@ -14,10 +14,15 @@ final class Scene {
     Scene(Model model, boolean ocean, double modelScale) {
         this.model = scaledModel(model, modelScale);
         this.ocean = ocean;
-        this.triangles = new ArrayList<>(model.triangles().size() + (ocean ? 72_202 : 2));
-        this.triangles.addAll(this.model.triangles());
+        List<Triangle> visibleGeometry = new ArrayList<>(this.model.triangles().size() + 2);
+        List<Triangle> acceleratedGeometry = new ArrayList<>(this.model.triangles().size() + (ocean ? 2 : 2));
+        visibleGeometry.addAll(this.model.triangles());
+        acceleratedGeometry.addAll(this.model.triangles());
+
         if (ocean) {
-            OceanWater.appendTo(triangles);
+            // The ocean itself is analytic and unbounded; only its distant seabed is
+            // represented by geometry. RasterRenderer draws the sea per pixel.
+            OceanWater.appendSeabedTo(acceleratedGeometry);
         } else {
             Material ground = new Material();
             ground.diffuse = new Vec3(0.105, 0.12, 0.135);
@@ -29,10 +34,16 @@ final class Scene {
             Vec3 c = new Vec3(s, -0.035, s);
             Vec3 d = new Vec3(-s, -0.035, s);
             Vec3 up = new Vec3(0, 1, 0);
-            triangles.add(new Triangle(a, c, b, up, up, up, ground));
-            triangles.add(new Triangle(a, d, c, up, up, up, ground));
+            Triangle g0 = new Triangle(a, c, b, up, up, up, ground);
+            Triangle g1 = new Triangle(a, d, c, up, up, up, ground);
+            visibleGeometry.add(g0);
+            visibleGeometry.add(g1);
+            acceleratedGeometry.add(g0);
+            acceleratedGeometry.add(g1);
         }
-        this.bvh = new Bvh(triangles);
+
+        this.triangles = visibleGeometry;
+        this.bvh = new Bvh(acceleratedGeometry);
     }
 
     private static Model scaledModel(Model source, double scale) {
@@ -40,10 +51,10 @@ final class Scene {
         List<Triangle> copy = new ArrayList<>(source.triangles().size());
         for (Triangle t : source.triangles()) {
             Vec3 a = t.a.mul(scale), b = t.b.mul(scale), c = t.c.mul(scale);
-            Vec3 normal = b.sub(a).cross(c.sub(a)).normalized();
-            copy.add(new Triangle(a, b, c, normal, normal, normal, t.ta, t.tb, t.tc, t.material));
+            if (t.hasUv) copy.add(new Triangle(a, b, c, t.na, t.nb, t.nc, t.ta, t.tb, t.tc, t.material));
+            else copy.add(new Triangle(a, b, c, t.na, t.nb, t.nc, t.material));
         }
-        return new Model(source.source(), copy);
+        return new Model(source.source(), copy, source.warnings());
     }
 
     Model model() { return model; }

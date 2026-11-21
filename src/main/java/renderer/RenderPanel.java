@@ -45,15 +45,15 @@ final class RenderPanel extends JPanel {
         } else {
             g2.setColor(new Color(190, 200, 211));
             g2.setFont(getFont().deriveFont(Font.BOLD, 20f));
-            String title = "WARSHIP / ARMOUR RENDERER";
+            String title = "WARSHIP STUDIO";
             int tw = g2.getFontMetrics().stringWidth(title);
             g2.drawString(title, Math.max(20, (getWidth() - tw) / 2), getHeight() / 2 - 26);
             g2.setFont(getFont().deriveFont(Font.PLAIN, 13f));
             g2.setColor(new Color(132, 146, 160));
-            String line = "Load a Wavefront OBJ model to begin";
+            String line = "Load a 3D model to begin";
             int lw = g2.getFontMetrics().stringWidth(line);
             g2.drawString(line, Math.max(20, (getWidth() - lw) / 2), getHeight() / 2 + 4);
-            String help = "Drag to orbit  ·  Scroll to zoom  ·  Preview before ray tracing";
+            String help = "Drag to orbit  ·  Scroll to zoom  ·  Texture  ·  Render";
             int hw = g2.getFontMetrics().stringWidth(help);
             g2.drawString(help, Math.max(20, (getWidth() - hw) / 2), getHeight() / 2 + 30);
         }
