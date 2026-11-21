@@ -1,8 +1,20 @@
+
 #!/bin/sh
 set -eu
+
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-if [ ! -f "$ROOT/build/warship-renderer.jar" ]; then
-    "$ROOT/build.sh"
+JAR="$ROOT/build/warship-renderer.jar"
+
+# Automatically build if the application has not been built yet.
+if [ ! -f "$JAR" ]; then
+    echo "Application not built. Building now..."
+    sh "$ROOT/build.sh"
 fi
-# Let the JVM size its heap from available RAM (suitable for 4 GB+ Pi systems).
-exec java -XX:MaxRAMPercentage=70.0 -jar "$ROOT/build/warship-renderer.jar" "$@"
+
+if ! command -v java >/dev/null 2>&1; then
+    echo "ERROR: Java runtime not found."
+    echo "Install Java 17 or newer."
+    exit 1
+fi
+
+exec java -XX:MaxRAMPercentage=70.0 -jar "$JAR" "$@"
