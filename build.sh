@@ -1,10 +1,9 @@
-#!/bin/sh
 
+#!/bin/sh
 set -eu
 
-# Resolve the project directory from the location of this script.
-SCRIPT_PATH=$(readlink -f "$0")
-ROOT=$(dirname "$SCRIPT_PATH")
+# Always use the directory containing this script.
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
 BUILD="$ROOT/build"
 CLASSES="$BUILD/classes"
@@ -14,65 +13,40 @@ SOURCE_DIR="$ROOT/src/main/java"
 echo "Building Warship Renderer..."
 echo "Project directory: $ROOT"
 
-# Make sure the script is being run from a valid project.
-if [ "$ROOT" = "/" ] || [ ! -d "$SOURCE_DIR" ]; then
-    echo "ERROR: Could not find the Java source directory:"
-    echo "       $SOURCE_DIR"
-    echo "Check that build.sh is inside the warship-renderer project folder."
+if [ ! -d "$SOURCE_DIR" ]; then
+    echo "ERROR: Java source directory not found: $SOURCE_DIR"
+    echo "Download the complete project and try again."
     exit 1
 fi
 
-# Check that the Java compiler is installed.
-if ! command -v javac >/dev/null 2>&1; then
-    echo "ERROR: javac was not found."
-    echo "Install a JDK, then run this script again."
-    echo "On Raspberry Pi OS, try: sudo apt install default-jdk"
-    exit 1
-fi
+for tool in javac jar; do
+    if ! command -v "$tool" >/dev/null 2>&1; then
+        echo "ERROR: $tool not found."
+        echo "Install Java 17 or newer JDK."
+        echo "Raspberry Pi OS: sudo apt install openjdk-17-jdk"
+        exit 1
+    fi
+done
 
-if ! command -v jar >/dev/null 2>&1; then
-    echo "ERROR: The jar tool was not found. Install a JDK."
-    exit 1
-fi
-
-# Display the Java compiler version.
 javac -version
 
-# Create a clean build directory.
-echo "Cleaning previous build..."
+mkdir -p "$BUILD"
 rm -rf "$CLASSES"
 mkdir -p "$CLASSES"
 
-# Compile Java source files.
-# The ! -name '._*' condition excludes macOS AppleDouble metadata files.
 echo "Compiling Java source files..."
 
 find "$SOURCE_DIR" \
     -type f \
     -name '*.java' \
     ! -name '._*' \
-    -print0 |
-    xargs -0 javac \
-        -encoding UTF-8 \
-        --release 17 \
-        -d "$CLASSES"
-
-# Create the executable JAR manifest.
-echo "Creating JAR manifest..."
+    -exec javac -encoding UTF-8 --release 17 -d "$CLASSES" {} +
 
 printf 'Main-Class: renderer.Main\n' > "$BUILD/manifest.mf"
 
-# Package the compiled classes into an executable JAR.
 echo "Packaging application..."
-
 jar cfm "$JAR" "$BUILD/manifest.mf" -C "$CLASSES" .
 
-echo ""
-echo "======================================"
-echo " BUILD COMPLETED"
-echo "======================================"
-echo "JAR location: $JAR"
-echo ""
-echo "To run the application:"
-echo "java -jar \"$JAR\""
-echo ""
+echo "BUILD COMPLETED"
+echo "JAR: $JAR"
+echo "Run using: sh \"$ROOT/run.sh\""
