@@ -1,20 +1,14 @@
-
 #!/bin/sh
 set -eu
+SCRIPT_DIR=$(dirname "$0")
+ROOT=$(CDPATH= cd "$SCRIPT_DIR" && pwd)
 
-ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-JAR="$ROOT/build/warship-renderer.jar"
+# Always rebuild so Java classes, the bundled .metal resource, and the Mac JNI library stay in sync.
+"$ROOT/build.sh"
 
-# Automatically build if the application has not been built yet.
-if [ ! -f "$JAR" ]; then
-    echo "Application not built. Building now..."
-    sh "$ROOT/build.sh"
+cd "$ROOT"
+if [ "$(uname -s)" = "Darwin" ]; then
+    exec java -Djava.library.path="$ROOT/build/native${JAVA_LIBRARY_PATH:+:$JAVA_LIBRARY_PATH}" \
+        -XX:MaxRAMPercentage=70.0 -jar "$ROOT/build/warship-studio.jar" "$@"
 fi
-
-if ! command -v java >/dev/null 2>&1; then
-    echo "ERROR: Java runtime not found."
-    echo "Install Java 17 or newer."
-    exit 1
-fi
-
-exec java -XX:MaxRAMPercentage=70.0 -jar "$JAR" "$@"
+exec java -XX:MaxRAMPercentage=70.0 -jar "$ROOT/build/warship-studio.jar" "$@"
