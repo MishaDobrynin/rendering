@@ -1,4 +1,3 @@
-
 #!/bin/sh
 set -eu
 
@@ -23,7 +22,6 @@ for tool in javac jar; do
     if ! command -v "$tool" >/dev/null 2>&1; then
         echo "ERROR: $tool not found."
         echo "Install Java 17 or newer JDK."
-        echo "Raspberry Pi OS: sudo apt install openjdk-17-jdk"
         exit 1
     fi
 done
