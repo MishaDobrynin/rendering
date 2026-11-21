@@ -15,8 +15,6 @@ The renderer is CPU-based.
 
 ## Build and run
 
-On Raspberry Pi OS:
-
 ```bash
 sudo apt update
 sudo apt install openjdk-17-jdk
@@ -30,8 +28,6 @@ Build and launch:
 ```
 
 `run.sh` lets the JVM size its heap to approximately 70% of the available memory. 
-
-Maven is optional; the included `pom.xml` can also build the project with `mvn package` where Maven is installed.
 
 ## Water implementation
 
